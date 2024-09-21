@@ -16,7 +16,8 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
-      <body className={inter.className}>{children}</body>
+      {/* background color to match Solace website? */}
+      <body className={inter.className + " bg-neutral-100"}>{children}</body>
     </html>
   );
 }

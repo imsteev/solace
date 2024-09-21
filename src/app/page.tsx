@@ -1,91 +1,75 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
+import AdvocatesTable from "./components/AdvocatesTable";
+import { Advocate } from "./types";
 
 export default function Home() {
-  const [advocates, setAdvocates] = useState([]);
-  const [filteredAdvocates, setFilteredAdvocates] = useState([]);
+  const [advocates, setAdvocates] = useState<Advocate[]>([]);
+  const [searchTerm, setSearchTerm] = useState<string>("");
+  const [page, setPage] = useState<number>(0);
 
+  // Potentially use something like react-query here for better loading/error states/caching/overall developer ergonomics.
   useEffect(() => {
-    console.log("fetching advocates...");
-    fetch("/api/advocates").then((response) => {
-      response.json().then((jsonResponse) => {
-        setAdvocates(jsonResponse.data);
-        setFilteredAdvocates(jsonResponse.data);
-      });
-    });
+    fetch(`/api/advocates?search=${searchTerm}&page=${page}&limit=5`).then(
+      (response) => {
+        response.json().then((jsonResponse) => {
+          setAdvocates(jsonResponse.data);
+        });
+      }
+    );
+  }, [searchTerm, page]);
+
+  // TODO: debounce this. Don't wanna this to trigger an API call on every keystroke
+  const onChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setSearchTerm(e.target.value);
+  };
+
+  const onClickReset = useCallback(() => {
+    setSearchTerm("");
+    setPage(0);
   }, []);
 
-  const onChange = (e) => {
-    const searchTerm = e.target.value;
-
-    document.getElementById("search-term").innerHTML = searchTerm;
-
-    console.log("filtering advocates...");
-    const filteredAdvocates = advocates.filter((advocate) => {
-      return (
-        advocate.firstName.includes(searchTerm) ||
-        advocate.lastName.includes(searchTerm) ||
-        advocate.city.includes(searchTerm) ||
-        advocate.degree.includes(searchTerm) ||
-        advocate.specialties.includes(searchTerm) ||
-        advocate.yearsOfExperience.includes(searchTerm)
-      );
-    });
-
-    setFilteredAdvocates(filteredAdvocates);
-  };
-
-  const onClick = () => {
-    console.log(advocates);
-    setFilteredAdvocates(advocates);
-  };
-
   return (
-    <main style={{ margin: "24px" }}>
-      <h1>Solace Advocates</h1>
-      <br />
-      <br />
-      <div>
+    <main className="m-12">
+      <h1>Solace Health &#62; Find an advocate</h1>
+      <div className="my-4">
         <p>Search</p>
-        <p>
-          Searching for: <span id="search-term"></span>
-        </p>
-        <input style={{ border: "1px solid black" }} onChange={onChange} />
-        <button onClick={onClick}>Reset Search</button>
+        <input
+          type="text"
+          className="border border-gray-300 rounded-md p-2 min-w-96"
+          onChange={onChange}
+          placeholder="Type to search by name, city, or degree"
+        />
+        <button
+          onClick={onClickReset}
+          className="border border-gray-300 rounded-md p-1 ml-2"
+        >
+          Reset
+        </button>
       </div>
-      <br />
-      <br />
-      <table>
-        <thead>
-          <th>First Name</th>
-          <th>Last Name</th>
-          <th>City</th>
-          <th>Degree</th>
-          <th>Specialties</th>
-          <th>Years of Experience</th>
-          <th>Phone Number</th>
-        </thead>
-        <tbody>
-          {filteredAdvocates.map((advocate) => {
-            return (
-              <tr>
-                <td>{advocate.firstName}</td>
-                <td>{advocate.lastName}</td>
-                <td>{advocate.city}</td>
-                <td>{advocate.degree}</td>
-                <td>
-                  {advocate.specialties.map((s) => (
-                    <div>{s}</div>
-                  ))}
-                </td>
-                <td>{advocate.yearsOfExperience}</td>
-                <td>{advocate.phoneNumber}</td>
-              </tr>
-            );
-          })}
-        </tbody>
-      </table>
+      <AdvocatesTable advocates={advocates} />
+      {/* TODO: pagination could be its own component. Or encapsulated in the table itself */}
+      <div className="flex justify-between ph-2 mt-4">
+        <button
+          disabled={page == 0} // TODO: would need total pages to disable "Next" button
+          className="border border-gray-300 rounded-md p-1"
+          onClick={() => {
+            setPage(page - 1);
+          }}
+        >
+          Previous
+        </button>
+        <div>Page {page + 1}</div>
+        <button
+          className="border border-gray-300 rounded-md p-1"
+          onClick={() => {
+            setPage(page + 1);
+          }}
+        >
+          Next
+        </button>
+      </div>
     </main>
   );
 }
